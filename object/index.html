@@ -6,10 +6,10 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  
-  <link rel="canonical" href="https://kizoky.github.io/postal3script/attributes/">
+  <meta name="author" content="Whackjob Interactive">
+  <link rel="canonical" href="https://kizoky.github.io/postal3script/object/">
   <link rel="shortcut icon" href="../img/favicon.ico">
-  <title>IfAttr, SetAttr, CheckAttr, ChangeAttr, RemoveAttr - Postal3Script</title>
+  <title>Object - Postal3Script</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
 
   <link rel="stylesheet" href="../css/theme.css" />
@@ -18,9 +18,9 @@
   
   <script>
     // Current page data
-    var mkdocs_page_name = "IfAttr, SetAttr, CheckAttr, ChangeAttr, RemoveAttr";
-    var mkdocs_page_input_path = "attributes.md";
-    var mkdocs_page_url = "/postal3script/attributes/";
+    var mkdocs_page_name = "Object";
+    var mkdocs_page_input_path = "object.md";
+    var mkdocs_page_url = "/postal3script/object/";
   </script>
   
   <script src="../js/jquery-2.1.1.min.js" defer></script>
@@ -62,16 +62,14 @@
                     </li>
                 </ul>
                 <p class="caption"><span class="caption-text">Attribute Checking</span></p>
-                <ul class="current">
-                    <li class="toctree-l1 current"><a class="reference internal current" href="./">IfAttr, SetAttr, CheckAttr, ChangeAttr, RemoveAttr</a>
-    <ul class="current">
-    </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../attributes/">IfAttr, SetAttr, CheckAttr, ChangeAttr, RemoveAttr</a>
                     </li>
                     <li class="toctree-l1"><a class="reference internal" href="../spclattributes/">Engine Attributes (ea_* ..)</a>
                     </li>
                 </ul>
                 <p class="caption"><span class="caption-text">Object Categories</span></p>
-                <ul>
+                <ul class="current">
                     <li class="toctree-l1"><a class="reference internal" href="../manner/">Manner</a>
                     </li>
                     <li class="toctree-l1"><a class="reference internal" href="../faction/">Faction</a>
@@ -82,7 +80,9 @@
                     </li>
                     <li class="toctree-l1"><a class="reference internal" href="../TBD/">Timer(tbd)</a>
                     </li>
-                    <li class="toctree-l1"><a class="reference internal" href="../object/">Object</a>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">Object</a>
+    <ul class="current">
+    </ul>
                     </li>
                     <li class="toctree-l1"><a class="reference internal" href="../TBD/">DistTo(tbd)</a>
                     </li>
@@ -212,11 +212,11 @@
     
       
         
-          <li>Attribute Checking &raquo;</li>
+          <li>Object Categories &raquo;</li>
         
       
     
-    <li>IfAttr, SetAttr, CheckAttr, ChangeAttr, RemoveAttr</li>
+    <li>Object</li>
     <li class="wy-breadcrumbs-aside">
       
     </li>
@@ -228,14 +228,10 @@
           <div role="main">
             <div class="section">
               
-                <h1 id="attributes">Attributes</h1>
-<p>In Postal3Script you are able to set or check Attributes, and execute states according to the results.
-<p>All attributes in Postal3Script are integers only.
-<p>When checking against multiple attributes at once you can use 'and'
-<h1>IfAttr </h1>
-<p>Checks an Attribute or Object. The Attribute or Object MUST exist.
+                <h1 id="object">Object</h1>
+<p>In Postal3Script you have access to certain pointers which helps you with targeting the correct actor.
 <pre><code class="language-js">
-st_IfAttrTutorial
+st_ObjectTutorial
 {
     Group Neutral
     Patterns
@@ -244,147 +240,72 @@ st_IfAttrTutorial
         {
             actions
             {
-                // Check for my faction, if it's Zealots then I love animals
-                IfAttr "ea_faction == Faction:Zealots SetAttr LoveAnimals 1"
+                // In P3S you can check for the following objects:
+                // 'Object:Caller' ; 'Object:Target' ; 'Object:Player'
+                // 'Object:slot#0' ; 'Object:null' ; 'Object:self'
+                // 'Object:item' ; 'Object:anchor'
 
-                // My target is the player, so I will hate them
-                IfAttr "Object:target == Object:player SetAttr HatesPlayer 1"
+                // You don't always have a pointer to the Caller, as it's
+                // heavily dependent on the Event which caused the NPC to enter this state
+                // Meaning, there's something or someone that forced the NPC to enter this state
 
-                // I have no ranged weapon, but I do have a melee weapon, then I'll bring up my weapon
-                IfAttr "HasWeapon:Ranged == 0 and HasWeapon:melee > 0 Block begin"
-                    IfAttr "HasWeapon:melee != 2 SetAttr WeaponChanged 1"
-                    Weapon select,melee
-                    SetAttr "ea_status sPUNISHER"
-                Block end
+                // Check if our caller exists (null means zero)
+                IfAttr "Object:caller != Object:null Block Begin"
+                    // Was it the Player who forced us into this state?
+                    IfAttr "Object:caller == Object:player Block Begin"
+                        // Well then we are going to run to them, endlessly
+                        TargetPlayer 1 // or TargetCaller 1
+                        MoveToTarget run,1,0
+                    Block End
+                Block End
 
-                // Player is forgiven according to the timer
-                IfAttr "Timer:tForgivePlayer <= 0 Pattern pt_end"
+                // Check if our target isn't the Player
+                IfAttr "Object:target != Object:null and Object:target != Object:Player Block Begin"
+                    // Bad day for our enemy, though, because they are going to die instantly
+                    ChangeAttr "target.ea_health -target.ea_health"
+                Block End
 
-                // State didn't execute from the Player, returning from this point
-                IfAttr "Object:caller != Object:player Return 1"
+                // Object:self and Object:item are barely used, the latter is used by Motorhead
+                // It's a pointer to the NPC's held item
+                // Check out ai_motorhead.p3s, ai_st1_common.p3s, ai_st2_states.p3s 
+                // and ai_st7_environment.p3s
 
-                // My target loves animals?? No way!
-                IfAttr "target.LoveAnimals == 1 Return 1"
+                // Object:anchor is used only in ai_mission_jwb.p3s (todo: what the hell it is?)
 
-                // My enemy of my enemy... is my enemy now!
-                IfAttr "target.Object:target != Object:null Block begin"
-                    AssistTarget 1
-                Block end
+                // Object:slot#0
+                // This can save any Object to memory, it was heavily used by Trashmasters when making missions
+                // Get entity named 'gameplay' and set it as target
+                TargetEntByName gameplay
+                // Save the target to memory
+                TargetToMem msGP
+                // Reset the target
+                ResetTarget 1
 
-                // My target is the Player, and they have their python out
-                IfAttr "Object:target == Object:player and target.ea_games == 1 State so_seepiss"
-            }
-        }
-    }
-}
-</code></pre>
-<h1>SetAttr </h1>
-<p>Creates and sets a new attribute's value
-<pre><code class="language-js">
-Constants
-{
-    Const YES,1
-    Const NO,0
-}
+                // Memory numbers
+                // 6 and 7 are unused, you can only use a maximum number of 10 slots
+                // Using a number higher than 9 and lower than 0 will cause it to go -1 
+                // which will be invalid
 
-st_SetAttrTutorial
-{
-    Group Neutral
-    Patterns
-    {
-        pt_default
-        {
-            actions
-            {
-                SetAttr "IamTheDevil 666"
+                // (from ai_st_init.p3s)
+                // Const msTEMP,0
+                // Const msOWNER,1
+                // Const msTARGET,2
+                // Const msENEMY,3
+                // Const msSUSPECTED,4
+                // Const msLEADER,5
+                ////Const msDRIVEN,6
+                ////Const msINTEREST,7
+                // Const msKILLER,8
+                // Const msGP,9
 
-                // Supports constants
-                SetAttr "y_Yes YES"
-                SetAttr "n_No NO"
-                SetAttr "ea_status sNEUTRAL"
-                SetAttr "reaction RE_NONE"
+                // And if we needed the saved target from memory, just do
+                TargetFromMem msGP
 
-                // Randomize non-existent attributes
-                // Maximum possible is 100
-                // Second value should always be zero
-                SetAttr "rnd 0,0,100"
-                SetAttr "rndtwo 25,0,75"
+                // Example from ai_mission_mlg.p3s
+                IfAttr "Object:caller == Object:Player ChangeAttr slot#msGP.Totaldead +1"
 
-                // Sets other object's attribute
-                SetAttr "target.cr_demo YES"
-                SetAttr "caller.cr_demo NO"
-            }
-        }
-    }
-}
-</code></pre>
-<h1>CheckAttr </h1>
-<p>Checks if an Attribute is equal to or greater than 1
-<pre><code class="language-js">
-st_CheckAttrTutorial
-{
-    Group Neutral
-    Patterns
-    {
-        pt_default
-        {
-            actions
-            {
-                CheckAttr "flag_static Return 1"
-                CheckAttr "greet_sleazy Say SLEEZ"
-                CheckAttr "AnimalNotCat Say LIKESANIMAL"
-                CheckAttr "AnimalCat Say LIKESANIMAL,LIKESCAT"
-            }
-        }
-    }
-}
-</code></pre>
-
-<h1>ChangeAttr </h1>
-<p>Changes an already existing Attribute's value, increasing, decreasing, multiplying, or by halving
-<p>Halving will clamp the value to integer (5 / 2 wouldn't be '2.5', but '3')
-<pre><code class="language-js">
-st_ChangeAttrTutorial
-{
-    Group Neutral
-    Patterns
-    {
-        pt_default
-        {
-            actions
-            {
-                // Randomization
-                ChangeAttr "poo_rnd 0:100"
-                ChangeAttr "combat_rnd 0:1"
-
-                ChangeAttr "DonutsIHave +1"
-                ChangeAttr "PooIGive -1"
-                ChangeAttr "Multiply *5"
-                ChangeAttr "Halve /5"
-
-                // Change Health on the fly
-                ChangeAttr "ea_health +25"
-            }
-        }
-    }
-}
-</code></pre>
-
-<h1>RemoveAttr </h1>
-<p>Removes an already existing Attribute from existence
-<pre><code class="language-js">
-st_RemoveAttrTutorial
-{
-    Group Neutral
-    Patterns
-    {
-        pt_default
-        {
-            actions
-            {
-                RemoveAttr "flag_PlayerFriendly"
-                RemoveAttr "poo_rnd"
-                RemoveAttr "IamTheDevil"
+                // And again, if we don't need it anymore we reset the target
+                ResetTarget 1
             }
         }
     }
@@ -397,10 +318,10 @@ st_RemoveAttrTutorial
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../spclattributes/" class="btn btn-neutral float-right" title="Engine Attributes (ea_* ..)">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../TBD/" class="btn btn-neutral float-right" title="DistTo(tbd)">Next <span class="icon icon-circle-arrow-right"></span></a>
       
       
-        <a href="../TBD/" class="btn btn-neutral" title="Events(tbd)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../TBD/" class="btn btn-neutral" title="Timer(tbd)"><span class="icon icon-circle-arrow-left"></span> Previous</a>
       
     </div>
   
@@ -409,6 +330,8 @@ st_RemoveAttrTutorial
 
   <div role="contentinfo">
     <!-- Copyright etc -->
+    
+      <p>Written by Kizoky and Pseudonym_Tim <br>© Whackjob Interactive 2022<br>ㅤ</p>
     
   </div>
 
@@ -429,7 +352,7 @@ st_RemoveAttrTutorial
       <span><a href="../TBD/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
     
-      <span><a href="../spclattributes/" style="color: #fcfcfc">Next &raquo;</a></span>
+      <span><a href="../TBD/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
